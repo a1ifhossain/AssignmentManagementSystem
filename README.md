@@ -7,6 +7,7 @@ Features: Teachers create classes, subjects, and assignments, then grade student
 Setup: Clone the repo, add a PostgreSQL connection string and JWT secret in appsettings.json, run dotnet ef database update to apply migrations, run dotnet run to start the API, then open the frontend HTML files to use the app.
 
 Demo Credentials:
+
 Teacher — Email: rahim.updated@gmail.com, Password: 123456
 
 Student — Email: sakib@gmail.com, Password: 123456
