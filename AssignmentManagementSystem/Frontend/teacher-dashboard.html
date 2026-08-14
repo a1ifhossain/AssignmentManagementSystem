@@ -1,0 +1,989 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            color: #222;
+        }
+
+        .navbar {
+            background: #1f2937;
+            color: white;
+            padding: 18px 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .navbar h2 {
+                margin: 0;
+            }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        button {
+            border: none;
+            border-radius: 6px;
+            padding: 9px 15px;
+            cursor: pointer;
+        }
+
+        .logout {
+            background: #ef4444;
+            color: white;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .welcome,
+        .section,
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .welcome {
+            margin-bottom: 25px;
+        }
+
+            .welcome h1 {
+                margin-top: 0;
+            }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .create-form {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .assignment {
+            border: 1px solid #ddd;
+            padding: 18px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+            .assignment h3 {
+                margin-top: 0;
+            }
+
+        .edit {
+            background: #f59e0b;
+            color: white;
+            margin-right: 8px;
+        }
+
+        .delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .submission {
+            border: 1px solid #ddd;
+            padding: 18px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .grade {
+            background: #16a34a;
+            color: white;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 700px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+
+        <h2>Assignment Management System</h2>
+
+        <div class="user-info">
+            <span id="userName"></span>
+            <span>Teacher</span>
+            <button class="logout" onclick="logout()">Logout</button>
+        </div>
+
+    </div>
+
+    <div class="container">
+
+        <div class="welcome">
+
+            <h1>Teacher Dashboard 👨‍🏫</h1>
+
+            <p>
+                Welcome, <strong id="welcomeName"></strong>
+            </p>
+
+        </div>
+
+
+        <div class="cards">
+
+            <div class="card">
+                <h3>Total Assignments</h3>
+                <div class="number" id="assignmentCount">0</div>
+            </div>
+
+            <div class="card">
+                <h3>Total Submissions</h3>
+                <div class="number" id="submissionCount">0</div>
+            </div>
+
+            <div class="card">
+                <h3>Role</h3>
+                <div class="number">Teacher</div>
+            </div>
+
+        </div>
+
+
+        <!-- CREATE ASSIGNMENT -->
+
+        <div class="section">
+
+            <h2>Create Assignment</h2>
+
+            <div class="create-form">
+
+                <input id="title"
+                       type="text"
+                       placeholder="Assignment title">
+
+                <textarea id="description"
+                          placeholder="Assignment description"></textarea>
+
+                <input id="deadline"
+                       type="datetime-local">
+
+                <input id="maxMarks"
+                       type="number"
+                       placeholder="Maximum marks">
+
+                <input id="classId"
+                       type="number"
+                       value="1"
+                       placeholder="Class ID">
+
+                <input id="subjectId"
+                       type="number"
+                       value="1"
+                       placeholder="Subject ID">
+
+                <button class="primary" onclick="createAssignment()">
+                    Create Assignment
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ASSIGNMENTS -->
+
+        <div class="section">
+
+            <h2>Assignments</h2>
+
+            <div id="assignments">
+                Loading assignments...
+            </div>
+
+        </div>
+
+
+        <!-- SUBMISSIONS -->
+
+        <div class="section" style="margin-top:25px;">
+
+            <h2>Student Submissions</h2>
+
+            <div id="submissions">
+                Loading submissions...
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+const API_URL = "https://localhost:7071/api";
+
+const token = localStorage.getItem("token");
+const userData = localStorage.getItem("user");
+
+
+// Check login
+
+if (!token || !userData) {
+
+    window.location.href = "index.html";
+
+}
+
+
+const user = JSON.parse(userData);
+
+
+// Only Teacher allowed
+
+if (user.role !== "Teacher") {
+
+    alert("Teacher access only.");
+
+    window.location.href = "dashboard.html";
+
+}
+
+
+document.getElementById("userName").textContent = user.name;
+
+document.getElementById("welcomeName").textContent = user.name;
+
+
+// Load assignments
+
+async function loadAssignments() {
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/Assignments`,
+            {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            }
+        );
+
+        if (!response.ok) {
+
+            throw new Error("Failed to load assignments");
+
+        }
+
+        const assignments = await response.json();
+
+        document.getElementById("assignmentCount").textContent =
+            assignments.length;
+
+        const container =
+            document.getElementById("assignments");
+
+        container.innerHTML = "";
+
+
+        if (assignments.length === 0) {
+
+            container.innerHTML =
+                "<p>No assignments found.</p>";
+
+            return;
+
+        }
+
+
+        assignments.forEach(assignment => {
+
+            const div = document.createElement("div");
+
+            div.className = "assignment";
+
+            div.innerHTML = `
+
+                <h3>${assignment.title}</h3>
+
+                <p>
+                    ${assignment.description || "No description"}
+                </p>
+
+                <p>
+                    <strong>Deadline:</strong>
+                    ${new Date(
+                        assignment.deadline
+                    ).toLocaleString()}
+                </p>
+
+                <p>
+                    <strong>Maximum Marks:</strong>
+                    ${assignment.maxMarks}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    ${assignment.status}
+                </p>
+
+                <button
+                    class="edit"
+                    onclick="editAssignment(${assignment.id})">
+                    Edit
+                </button>
+
+                <button
+                    class="delete"
+                    onclick="deleteAssignment(${assignment.id})">
+                    Delete
+                </button>
+
+            `;
+
+            container.appendChild(div);
+
+        });
+
+    }
+    catch (error) {
+
+        console.error(error);
+
+        document.getElementById("assignments").innerHTML =
+            "<p>Could not load assignments.</p>";
+
+    }
+
+}
+
+
+// Create assignment
+
+async function createAssignment() {
+
+    const title =
+        document.getElementById("title").value;
+
+    const description =
+        document.getElementById("description").value;
+
+    const deadline =
+        document.getElementById("deadline").value;
+
+    const maxMarks =
+        Number(document.getElementById("maxMarks").value);
+
+    const classId =
+        Number(document.getElementById("classId").value);
+
+    const subjectId =
+        Number(document.getElementById("subjectId").value);
+
+
+    if (!title || !description || !deadline || !maxMarks) {
+
+        alert("Please fill all required fields.");
+
+        return;
+
+    }
+
+
+    const assignment = {
+
+        title: title,
+
+        description: description,
+
+        deadline: new Date(deadline).toISOString(),
+
+        maxMarks: maxMarks,
+
+        status: "Active",
+
+        teacherId: user.id,
+
+        classId: classId,
+
+        subjectId: subjectId
+
+    };
+
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/Assignments`,
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type": "application/json",
+
+                    "Authorization":
+                        "Bearer " + token
+
+                },
+
+                body: JSON.stringify(assignment)
+
+            }
+        );
+
+
+        if (!response.ok) {
+
+            const error =
+                await response.text();
+
+            alert("Failed: " + error);
+
+            return;
+
+        }
+
+
+        alert("Assignment created successfully!");
+
+
+        document.getElementById("title").value = "";
+
+        document.getElementById("description").value = "";
+
+        document.getElementById("deadline").value = "";
+
+        document.getElementById("maxMarks").value = "";
+
+
+        loadAssignments();
+
+    }
+    catch (error) {
+
+        console.error(error);
+
+        alert("Could not connect to API.");
+
+    }
+
+}
+
+
+// Delete assignment
+
+async function deleteAssignment(id) {
+
+    if (!confirm("Delete this assignment?")) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/Assignments/${id}`,
+            {
+
+                method: "DELETE",
+
+                headers: {
+
+                    "Authorization":
+                        "Bearer " + token
+
+                }
+
+            }
+        );
+
+
+        if (!response.ok) {
+
+            alert("Could not delete assignment.");
+
+            return;
+
+        }
+
+
+        alert("Assignment deleted.");
+
+        loadAssignments();
+
+    }
+    catch (error) {
+
+        console.error(error);
+
+        alert("Could not connect to API.");
+
+    }
+
+}
+
+
+// Edit assignment
+
+async function editAssignment(id) {
+
+    const title =
+        prompt("Enter new assignment title:");
+
+    if (!title) {
+
+        return;
+
+    }
+
+
+    const description =
+        prompt("Enter new description:");
+
+    const maxMarks =
+        prompt("Enter maximum marks:");
+
+
+    try {
+
+        // Get existing assignment
+
+        const getResponse = await fetch(
+            `${API_URL}/Assignments/${id}`,
+            {
+
+                headers: {
+
+                    "Authorization":
+                        "Bearer " + token
+
+                }
+
+            }
+        );
+
+
+        const existing =
+            await getResponse.json();
+
+
+        const updated = {
+
+            id: id,
+
+            title: title,
+
+            description:
+                description || existing.description,
+
+            deadline:
+                existing.deadline,
+
+            maxMarks:
+                Number(maxMarks) || existing.maxMarks,
+
+            status:
+                existing.status,
+
+            teacherId:
+                existing.teacherId,
+
+            classId:
+                existing.classId,
+
+            subjectId:
+                existing.subjectId
+
+        };
+
+
+        const response = await fetch(
+            `${API_URL}/Assignments/${id}`,
+            {
+
+                method: "PUT",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "Authorization":
+                        "Bearer " + token
+
+                },
+
+                body:
+                    JSON.stringify(updated)
+
+            }
+        );
+
+
+        if (!response.ok) {
+
+            alert("Could not update assignment.");
+
+            return;
+
+        }
+
+
+        alert("Assignment updated.");
+
+        loadAssignments();
+
+    }
+    catch (error) {
+
+        console.error(error);
+
+        alert("Could not connect to API.");
+
+    }
+
+}
+
+
+// Load submissions
+
+async function loadSubmissions() {
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/Submissions`,
+            {
+
+                headers: {
+
+                    "Authorization":
+                        "Bearer " + token
+
+                }
+
+            }
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to load submissions"
+            );
+
+        }
+
+
+        const submissions =
+            await response.json();
+
+
+        document.getElementById(
+            "submissionCount"
+        ).textContent =
+            submissions.length;
+
+
+        const container =
+            document.getElementById(
+                "submissions"
+            );
+
+
+        container.innerHTML = "";
+
+
+        if (submissions.length === 0) {
+
+            container.innerHTML =
+                "<p>No submissions yet.</p>";
+
+            return;
+
+        }
+
+
+        submissions.forEach(submission => {
+
+            const div =
+                document.createElement("div");
+
+            div.className =
+                "submission";
+
+
+            div.innerHTML = `
+
+                <h3>
+                    Submission #${submission.id}
+                </h3>
+
+                <p>
+                    <strong>Student ID:</strong>
+                    ${submission.studentId}
+                </p>
+
+                <p>
+                    <strong>Assignment ID:</strong>
+                    ${submission.assignmentId}
+                </p>
+
+                <p>
+                    <strong>Answer:</strong>
+                    ${submission.answer}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    ${submission.status}
+                </p>
+
+                <p>
+                    <strong>Marks:</strong>
+                    ${submission.marks ?? "Not graded"}
+                </p>
+
+                <p>
+                    <strong>Feedback:</strong>
+                    ${submission.feedback ?? "No feedback"}
+                </p>
+
+                <button
+                    class="grade"
+                    onclick="gradeSubmission(${submission.id})">
+
+                    Grade Submission
+
+                </button>
+
+            `;
+
+
+            container.appendChild(div);
+
+        });
+
+    }
+    catch (error) {
+
+        console.error(error);
+
+        document.getElementById(
+            "submissions"
+        ).innerHTML =
+            "<p>Could not load submissions.</p>";
+
+    }
+
+}
+
+
+// Grade submission
+
+async function gradeSubmission(id) {
+
+    const marks =
+        prompt("Enter marks:");
+
+    if (marks === null) {
+
+        return;
+
+    }
+
+
+    const feedback =
+        prompt("Enter feedback:");
+
+
+    try {
+
+        // Get existing submission
+
+        const getResponse =
+            await fetch(
+                `${API_URL}/Submissions/${id}`,
+                {
+
+                    headers: {
+
+                        "Authorization":
+                            "Bearer " + token
+
+                    }
+
+                }
+            );
+
+
+        const existing =
+            await getResponse.json();
+
+
+        const updated = {
+
+            id: id,
+
+            answer:
+                existing.answer,
+
+            submittedAt:
+                existing.submittedAt,
+
+            status:
+                "Graded",
+
+            marks:
+                Number(marks),
+
+            feedback:
+                feedback || "",
+
+            assignmentId:
+                existing.assignmentId,
+
+            studentId:
+                existing.studentId
+
+        };
+
+
+        const response =
+            await fetch(
+                `${API_URL}/Submissions/${id}`,
+                {
+
+                    method: "PUT",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Authorization":
+                            "Bearer " + token
+
+                    },
+
+                    body:
+                        JSON.stringify(updated)
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const error =
+                await response.text();
+
+            alert(
+                "Could not grade submission: "
+                + error
+            );
+
+            return;
+
+        }
+
+
+        alert("Submission graded successfully!");
+
+
+        loadSubmissions();
+
+    }
+    catch (error) {
+
+        console.error(error);
+
+        alert("Could not connect to API.");
+
+    }
+
+}
+
+
+// Logout
+
+function logout() {
+
+    localStorage.removeItem("token");
+
+    localStorage.removeItem("user");
+
+    window.location.href =
+        "index.html";
+
+}
+
+
+// Start
+
+loadAssignments();
+
+loadSubmissions();
+
+    </script>
+
+</body>
+</html>
