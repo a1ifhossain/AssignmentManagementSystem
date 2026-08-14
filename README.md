@@ -8,4 +8,5 @@ Setup: Clone the repo, add a PostgreSQL connection string and JWT secret in apps
 
 Demo Credentials:
 Teacher — Email: rahim.updated@gmail.com, Password: 123456
+
 Student — Email: sakib@gmail.com, Password: 123456
